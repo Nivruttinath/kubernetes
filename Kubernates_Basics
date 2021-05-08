@@ -1,0 +1,296 @@
+Kubernetes :
+Kubernetes is a container management technology developed in Google lab to manage containerized applications in different kind of environments such as physical, virtual, and cloud infrastructure. It is an open source system which helps in creating and managing containerization of application. 
+Kubernetes comes with a capability of automating deployment, scaling of application, and operations of application containers across clusters. It is capable of creating container centric infrastructure.
+
+Kubernetes - Cluster Architecture
+Kubernetes follows client-server architecture. Wherein, we have master installed on one machine and the node on separate Linux machines. 
+
+Kubernetes - Master Machine Components
+etcd
+It stores the configuration information which can be used by each of the nodes in the cluster. It is a high availability key value store that can be distributed among multiple nodes. It is accessible only by Kubernetes API server as it may have some sensitive information. It is a distributed key value Store which is accessible to all.
+
+API Server
+Kubernetes is an API server which provides all the operation on cluster using the API. API server implements an interface, which means different tools and libraries can 
+readily communicate with it. Kubeconfig is a package along with the server side tools that can be used for communication. It exposes Kubernetes API.
+
+Controller Manager
+This component is responsible for most of the collectors that regulates the state of cluster and performs a task. In general, it can be considered as a daemon which runs in nonterminating loop and is responsible for collecting and sending information to API server. It works toward getting the shared state of cluster and then make changes to bring the current status of the server to the desired state. The key controllers are replication controller, endpoint controller, namespace controller, and service account controller. The controller manager runs different kind of controllers to handle nodes, endpoints, etc.
+
+Scheduler
+This is one of the key components of Kubernetes master. It is a service in master responsible for distributing the workload. It is responsible for tracking utilization of working load on cluster nodes and then placing the workload on which resources are available and accept the workload. In other words, this is the mechanism responsible for allocating pods to available nodes. The scheduler is responsible for workload utilization and allocating pod to new node.
+
+Kubernetes - Node Components
+Docker
+The first requirement of each node is Docker which helps in running the encapsulated application containers in a relatively isolated but lightweight operating environment.
+
+Kubelet Service
+This is a small service in each node responsible for relaying information to and from control plane service. It interacts with etcd store to read configuration details and wright values. This communicates with the master component to receive commands and work. The kubelet process then assumes responsibility for maintaining the state of work and the node server. It manages network rules, port forwarding, etc.
+
+Kubernetes Proxy Service
+This is a proxy service which runs on each node and helps in making services available to the external host. It helps in forwarding the request to correct containers and is capable of performing primitive load balancing. It makes sure that the networking environment is predictable and accessible and at the same time it is isolated as well. It manages pods on node, volumes, secrets, creating new containers’ health checkup, etc.
+
+Kubernetes - Images
+Kubernetes (Docker) images are the key building blocks of Containerized Infrastructure. Each container in a pod has its Docker image running inside it.
+When we are configuring a pod, the image property in the configuration file has the same syntax as the Docker command does. The configuration file has a field to define the image name, which we are planning to pull from the registry.
+$ kubectl create –f Tesing_for_Image_pull
+
+Kubernetes - Jobs
+The main function of a job is to create one or more pod and tracks about the success of pods. They ensure that the specified number of pods are completed successfully. When a specified number of successful run of pods is completed, then the job is considered complete.
+apiVersion: v1
+kind: Job ------------------------> 1
+metadata:
+   name: py
+   spec:
+   template:
+      metadata
+      name: py -------> 2
+      spec:
+         containers:
+            - name: py ------------------------> 3
+            image: python----------> 4
+            command: ["python", "SUCCESS"]
+            restartPocliy: Never --------> 5
+$ kubectl create –f py.yaml
+$ kubectl describe jobs/py
+
+Scheduled Job
+Scheduled job in Kubernetes uses Cronetes, which takes Kubernetes job and launches them in Kubernetes cluster.
+	> Scheduling a job will run a pod at a specified point of time.
+	> A parodic job is created for it which invokes itself automatically.
+apiVersion: v1
+kind: Job
+metadata:
+   name: py
+spec:
+   schedule: h/30 * * * * ? -------------------> 1
+   template:
+      metadata
+         name: py
+      spec:
+         containers:
+         - name: py
+         image: python
+         args:
+/bin/sh -------> 2
+-c
+ps –eaf ------------> 3
+restartPocliy: OnFailure
+
+Kubernetes - Labels & Selectors
+Labels
+Labels are key-value pairs which are attached to pods, replication controller and services. They are used as identifying attributes for objects such as pods and replication controller. They can be added to an object at creation time and can be added or modified at the run time.
+
+Selectors
+Labels do not provide uniqueness. In general, we can say many objects can carry the same labels. Labels selector are core grouping primitive in Kubernetes. They are used by the users to select a set of objects.
+
+Kubernetes API currently supports two type of selectors −
+	> Equality-based selectors
+	> Set-based selectors
+
+Equality-based Selectors
+They allow filtering by key and value. Matching objects should satisfy all the specified labels.
+Set-based Selectors
+Set-based selectors allow filtering of keys according to a set of values.
+
+Kubernetes - Namespace
+Namespace provides an additional qualification to a resource name. It can be as a virtual wall between multiple clusters.
+Create a Namespace
+The following command is used to create a namespace.
+apiVersion: v1
+kind: Namespce
+metadata
+   name: elk
+   
+Control the Namespace
+The following command is used to control the namespace.
+$ kubectl create –f namespace.yml ---------> 1
+$ kubectl get namespace -----------------> 2
+$ kubectl get namespace <Namespace name> ------->3
+$ kubectl describe namespace <Namespace name> ---->4
+$ kubectl delete namespace <Namespace name>   
+
+Kubernetes - Node
+A node is a working machine in Kubernetes cluster which is also known as a minion. They are working units which can be physical, VM, or a cloud instance.
+Each node has all the required configuration required to run a pod on it such as the proxy service and kubelet service along with the Docker, which is used to run the Docker containers on the pod created on the node.
+Service with Selector
+apiVersion: v1
+kind: node
+metadata:
+   name: < ip address of the node>
+   labels:
+      name: <lable name>
+
+Node Controller
+They are the collection of services which run in the Kubernetes master and continuously monitor the node in the cluster on the basis of metadata.name. If all the required services are running, then the node is validated and a newly created pod will be assigned to that node by the controller. If it is not valid, then the master will not assign any pod to it and will wait until it becomes valid.
+
+Kubernetes - Service
+A service can be defined as a logical set of pods. It can be defined as an abstraction on the top of the pod which provides a single IP address and DNS name by which pods can be accessed. With Service, it is very easy to manage load balancing configuration. It helps pods to scale very easily.	  
+A service is a REST object in Kubernetes whose definition can be posted to Kubernetes apiServer on the Kubernetes master to create a new instance.
+
+Kubernetes - Pod
+A pod is a collection of containers and its storage inside a node of a Kubernetes cluster. It is possible to create a pod with multiple containers inside it. For example, keeping a database container and data container in the same pod.
+
+Types of Pod
+There are two types of Pods −
+	> Single container pod
+	> Multi container pod
+Single Container Pod
+They can be simply created with the kubctl run command, where you have a defined image on the Docker registry which we will pull while creating a pod.
+$ kubectl run <name of pod> --image=<name of the image from registry>
+$ kubectl run tomcat --image = tomcat:8.0
+
+apiVersion: v1
+kind: Pod
+metadata:
+   name: Tomcat
+spec:
+   containers:
+   - name: Tomcat
+      image: tomcat: 8.0
+      ports:
+containerPort: 7500
+   imagePullPolicy: Always
+$ kubectl create –f tomcat.yml
+
+Multi Container Pod
+Multi container pods are created using yaml mail with the definition of the containers.
+apiVersion: v1
+kind: Pod
+metadata:
+   name: Tomcat
+spec:
+   containers:
+   - name: Tomcat
+      image: tomcat: 8.0
+      ports:
+containerPort: 7500
+   imagePullPolicy: Always
+   -name: Database
+      Image: mongoDB
+      Ports:
+containerPort: 7501
+   imagePullPolicy: Always
+
+Kubernetes - Replication Controller
+Replication Controller is one of the key features of Kubernetes, which is responsible for managing the pod lifecycle. It is responsible for making sure that the specified number of pod replicas are running at any point of time. It is used in time when one wants to make sure that the specified number of pod or at least one pod is running. It has the capability to bring up or down the specified no of pod.   
+
+
+Kubernetes - Replica Sets
+Replica Set ensures how many replica of pod should be running. It can be considered as a replacement of replication controller. The key difference between the replica set and the replication controller is, the replication controller only supports equality-based selector whereas the replica set supports set-based selector.
+
+
+Kubernetes - Deployments
+Deployments are upgraded and higher version of replication controller. They manage the deployment of replica sets which is also an upgraded version of the replication controller. They have the capability to update the replica set and are also capable of rolling back to the previous version.
+
+Kubernetes - Volumes
+In Kubernetes, a volume can be thought of as a directory which is accessible to the containers in a pod. We have different types of volumes in Kubernetes and the type defines how the volume is created and its content.
+
+Persistent Volume and Persistent Volume Claim
+Persistent Volume (PV) − It’s a piece of network storage that has been provisioned by the administrator. It’s a resource in the cluster which is independent of any individual pod that uses the PV.
+Persistent Volume Claim (PVC) − The storage requested by Kubernetes for its pods is known as PVC. The user does not need to know the underlying provisioning. The claims must be created in the same namespace where the pod is created.
+
+Kubernetes - Secrets
+Secrets can be defined as Kubernetes objects used to store sensitive data such as user name and passwords with encryption.
+There are multiple ways of creating secrets in Kubernetes.
+	> Creating from txt files.
+	> Creating from yaml file.
+Creating From Text File
+In order to create secrets from a text file such as user name and password, we first need to store them in a txt file and use the following command.
+$ kubectl create secret generic tomcat-passwd –-from-file = ./username.txt –fromfile = ./.password.txt
+Creating From Yaml File
+apiVersion: v1
+kind: Secret
+metadata:
+name: tomcat-pass
+type: Opaque
+data:
+   password: <User Password>
+   username: <User Name>
+Creating the Secret
+$ kubectl create –f Secret.yaml
+secrets/tomcat-pass
+
+Using Secrets
+Once we have created the secrets, it can be consumed in a pod or the replication controller as −
+	> Environment Variable
+	> Volume   
+As Environment Variable
+In order to use the secret as environment variable, we will use env under the spec section of pod yaml file.
+env:
+- name: SECRET_USERNAME
+   valueFrom:
+      secretKeyRef:
+         name: mysecret
+         key: tomcat-pass
+		 
+As Volume
+spec:
+   volumes:
+      - name: "secretstest"
+         secret:
+            secretName: tomcat-pass
+   containers:
+      - image: tomcat:7.0
+         name: awebserver
+         volumeMounts:
+            - mountPath: "/tmp/mysec"
+            name: "secretstest"		 
+
+Secret Configuration As Environment Variable
+apiVersion: v1
+kind: ReplicationController
+metadata:
+   name: appname
+spec:
+replicas: replica_count
+template:
+   metadata:
+      name: appname
+   spec:
+      nodeSelector:
+         resource-group:
+      containers:
+         - name: appname
+            image:
+            imagePullPolicy: Always
+            ports:
+            - containerPort: 3000
+            env: -----------------------------> 1
+               - name: ENV
+                  valueFrom:
+                     configMapKeyRef:
+                        name: appname
+                        key: tomcat-secrets
+
+Secrets As Volume Mount
+apiVersion: v1
+kind: pod
+metadata:
+   name: appname
+spec:
+   metadata:
+      name: appname
+   spec:
+   volumes:
+      - name: "secretstest"
+         secret:
+            secretName: tomcat-pass
+   containers:
+      - image: tomcat: 8.0
+         name: awebserver
+         volumeMounts:
+            - mountPath: "/tmp/mysec"
+            name: "secretstest"
+
+
+Kubernetes - Network Policy
+Network Policy defines how the pods in the same namespace will communicate with each other and the network endpoint. It requires extensions/v1beta1/networkpolicies to be enabled in the runtime configuration in the API server. Its resources use labels to select the pods and define rules to allow traffic to a specific pod in addition to which is defined in the namespace.
+
+			
+
+
+# kubectl get namespaces
+# kubectl create namespace dev
+# kubectl get pods -n dev
+# kubectl delete namespace dev
+
