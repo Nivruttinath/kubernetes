@@ -1,0 +1,237 @@
+
+1.setup hostnames with ipaddress
+192.168.28.128 kmaster
+192.168.28.131 knode1
+192.168.28.132 knode2
+
+2. disable the selinux and enable  br_netfilter Kernel Module (iptables for filtering,pods communication)
+
+vi /etc/selinux/config
+
+set to disabled
+
+
+3. disable the firewall
+
+systemctl stop firewalld
+systemctl disable firewalld
+systemctl status firewalld
+
+4. enabling modprobe for virtual ips
+
+
+modprobe br_netfilter
+
+echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables
+
+5. Disable SWAP
+
+swapoff -a
+
+6.vi /etc/fstab
+
+comment
+
+# #/dev/mapper/cl-swap
+
+
+7.  Install Docker CE Docker Community Edition (CE) and 
+ package dependencies for docker-ce.
+
+yum install -y yum-utils device-mapper-persistent-data lvm2
+
+rpm -ivh container-selinux-2.9-4.el7.noarch.rpm
+rpm -ivh docker-ce-18.06.0.ce-3.el7.x86_64.rpm
+--
+8. Install Kubernetes
+
+Add the kubernetes repository to the centos 7 system by running the following command.
+
+copy and paste the below in commandline
+
+cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
+        https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+EOF
+
+yum install -y kubelet kubeadm kubectl
+
+After the installation is complete, restart all those servers.
+
+sudo reboot
+
+---------
+
+9. Log in again to the server and start the services, docker and kubelet.
+
+systemctl start docker && systemctl enable docker
+systemctl start kubelet && systemctl enable kubelet
+
+10. Change the cgroup-driver
+
+docker info | grep -i cgroup
+
+ sed -i 's/cgroup-driver=systemd/cgroup-driver=cgroupfs/g' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+
+
+Reload the systemd system and restart the kubelet service.
+
+systemctl daemon-reload
+systemctl restart kubelet
+
+complete the above steps in all machines( master node machines
+
++++++++++++++
+
+Step 2 - Kubernetes Cluster Initialization
+
+
+
+192.168.187.210 kmaster
+192.168.187.211 knode
+192.168.187.212 knode2
+
+1. ****kubeadm init --apiserver-advertise-address=192.168.187.210 --pod-network-cidr=10.244.0.0/16
+
+kubeadm init --apiserver-advertise-address=192.168.187.210 (masterip) --pod-network-cidr=10.244.0.0/16  (pod network called flannel (virtual network)ip series)
+
+
+Note:
+
+--apiserver-advertise-address = determines which IP address Kubernetes should advertise its API server on.
+
+--pod-network-cidr = specify the range of IP addresses for the pod network. We're using the 'flannel' virtual network. If you want to use another pod network such as weave-net or calico, change the range IP address.
+
+(output will be like below
+
+Your Kubernetes master has initialized successfully!
+
+To start using your cluster, you need to run the following as a regular user:
+
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+You should now deploy a pod network to the cluster.
+Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+  https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+You can now join any number of machines by running the following on each node
+as root:
+
+  kubeadm join 192.168.187.210:6443 --token 5v4mkl.wss5vsz63err0hkn --discovery-token-ca-cert-hash sha256:72d4deb8e5f0f8374d1ab0e211e498a4689f4ef065725337f61bdef6e766e482
+
+)
+
+
+2. Note:
+
+Copy the 'kubeadm join ... ... ...' command to your text editor. The command will be used to register new nodes to the kubernetes cluster.
+
+Now in order to use Kubernetes, we need to run some commands as on the result.
+
+Create new '.kube' configuration directory and copy the configuration 'admin.conf'.
+
+
+*****
+****mkdir -p $HOME/.kube
+*sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+Next, deploy the flannel network to the kubernetes cluster using the kubectl command.
+
+****kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+The flannel network has been deployed to the Kubernetes cluster.
+
+Wait for a minute and then check kubernetes node and pods using commands below.
+
+****kubectl get nodes
+****kubectl get pods --all-namespaces
+
+And you will get the 'k8s-master' node is running as a 'master' cluster with status 'ready', and you will get all pods that are needed for the cluster, including the 'kube-flannel-ds' for network pod configuration.
+
+Make sure all kube-system pods status is 'running'.
+
+(output will be like
+[root@kmaster ~]# kubectl get nodes
+NAME      STATUS    ROLES     AGE       VERSION
+kmaster   Ready     master    9m        v1.11.0
+[root@kmaster ~]# kubectl get pods --all-namespaces
+NAMESPACE     NAME                              READY     STATUS    RESTARTS   AGE
+kube-system   coredns-78fcdf6894-bbhgc          1/1       Running   0          9m
+kube-system   coredns-78fcdf6894-pdwmf          1/1       Running   0          9m
+kube-system   etcd-kmaster                      1/1       Running   0          2m
+kube-system   kube-apiserver-kmaster            1/1       Running   0          2m
+kube-system   kube-controller-manager-kmaster   1/1       Running   0          2m
+kube-system   kube-flannel-ds-amd64-ttzrs       1/1       Running   0          2m
+kube-system   kube-proxy-67hbk                  1/1       Running   0          9m
+kube-system   kube-scheduler-kmaster            1/1       Running   0          2m
+)
+
+Kubernetes cluster master initialization and configuration has been completed.
+
+----------------------
+
+
+Step 3 - Adding node1 and node2 to the Cluster
+
+goto node1 machine
+
+disable the firewall
+systemctl status firewalld
+systemctl stop firewalld
+systemctl disable firewalld
+
+
+kubeadm join 192.168.187.210:6443 --token 5v4mkl.wss5vsz63err0hkn --discovery-token-ca-cert-hash sha256:72d4deb8e5f0f8374d1ab0e211e498a4689f4ef065725337f61bdef6e766e482
+
+goto node2 machine
+
+disable the firewall
+systemctl status firewalld
+systemctl stop firewalld
+systemctl disable firewalld
+
+
+kubeadm join 192.168.187.210:6443 --token 5v4mkl.wss5vsz63err0hkn --discovery-token-ca-cert-hash sha256:72d4deb8e5f0f8374d1ab0e211e498a4689f4ef065725337f61bdef6e766e482
+
+(output will be 
+
+kubeadm join 192.168.187.210:6443 --token 5v4mkl.wss5vsz63err0hkn --discovery-token-ca-cert-hash sha256:72d4deb8e5f0f8374d1ab0e211e498a4689f4ef065725337f61bdef6e766e482
+[preflight] running pre-flight checks
+	[WARNING RequiredIPVSKernelModulesAvailable]: the IPVS proxier will not be used, because the following required kernel modules are not loaded: [ip_vs_wrr ip_vs_sh nf_conntrack_ipv4 ip_vs ip_vs_rr] or no builtin kernel ipvs support: map[ip_vs:{} ip_vs_rr:{} ip_vs_wrr:{} ip_vs_sh:{} nf_conntrack_ipv4:{}]
+you can solve this problem with following methods:
+ 1. Run 'modprobe -- ' to load missing kernel modules;
+2. Provide the missing builtin kernel ipvs support
+
+I0717 03:34:49.305175   14792 kernel_validator.go:81] Validating kernel version
+I0717 03:34:49.305286   14792 kernel_validator.go:96] Validating kernel config
+	[WARNING SystemVerification]: docker version is greater than the most recently validated version. Docker version: 18.03.1-ce. Max validated version: 17.03
+[discovery] Trying to connect to API Server "192.168.187.210:6443"
+[discovery] Created cluster-info discovery client, requesting info from "https://192.168.187.210:6443"
+[discovery] Requesting info from "https://192.168.187.210:6443" again to validate TLS against the pinned public key
+[discovery] Cluster info signature and contents are valid and TLS certificate validates against pinned roots, will use API Server "192.168.187.210:6443"
+[discovery] Successfully established connection with API Server "192.168.187.210:6443"
+[kubelet] Downloading configuration for the kubelet from the "kubelet-config-1.11" ConfigMap in the kube-system namespace
+[kubelet] Writing kubelet configuration to file "/var/lib/kubelet/config.yaml"
+[kubelet] Writing kubelet environment file with flags to file "/var/lib/kubelet/kubeadm-flags.env"
+[preflight] Activating the kubelet service
+[tlsbootstrap] Waiting for the kubelet to perform the TLS Bootstrap...
+[patchnode] Uploading the CRI Socket information "/var/run/dockershim.sock" to the Node API object "knode" as an annotation
+
+This node has joined the cluster:
+* Certificate signing request was sent to master and a response
+  was received.
+* The Kubelet was informed of the new secure connection details.
+
+Run 'kubectl get nodes' on the master to see this node join the cluster.
+)
++++++++++++++++++++
+

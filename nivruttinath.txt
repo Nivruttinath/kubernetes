@@ -1,0 +1,20 @@
+s3 cross region replication
+field level entryption use case in cloudfront
+cidr of vpc, can we have one more cidr associated with existing vpc
+build pipeline
+add/copy in docker
+communicaton between two pods
+branching strategy
+kubernetes master slave components
+
+git cicd pipeline
+teraform
+ansible
+docker 
+
+why to use expose
+kubelet
+kube-system pods 
+which dns u have used
+replicasets command
+stateful set
